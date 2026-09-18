@@ -1,0 +1,2 @@
+# Ensure GitHub recognizes this repository as Python, not HTML
+*.html linguist-detectable=false

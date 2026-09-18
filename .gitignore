@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+MY_CV_NOTES.md
+*.log
+.DS_Store
