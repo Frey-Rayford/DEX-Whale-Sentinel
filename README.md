@@ -10,9 +10,13 @@
 Hệ thống thu thập, xử lý và giám sát luồng giao dịch Crypto DEX thời gian thực (Real-time Stream Pipeline) với độ trễ thấp, kết nối trực tiếp dữ liệu on-chain từ **DexPaprika API** (hỗ trợ Ethereum, Solana, Base, Arbitrum), phát hiện các lệnh cá voi (Whale Alert) và tính toán chỉ số chênh lệch khối lượng mua/bán (Cumulative Volume Delta - CVD) trên cửa sổ trượt (Sliding Window).
 
 
+![Trading Terminal Preview](docs/terminal_preview.png)
+
 ---
 
 ## 1. Kiến Trúc Hệ Thống (Architecture)
+
+![Pipeline Architecture](docs/pipeline_architecture.png)
 
 ```text
 DexPaprika API (REST / SSE)
@@ -81,6 +85,8 @@ $$\text{CVD} = \text{Buy Volume} - \text{Sell Volume}$$
 - **Phân tích theo phút:** Tích lũy khối lượng mua/bán theo các bucket 1 phút trong 30 phút gần nhất, vẽ biểu đồ cột Buy/Sell (xanh/đỏ) kết hợp đường xu hướng CVD tích lũy.
 - **Tốc độ giao dịch (Velocity):** Đo lường số lệnh swap / giây trong cửa sổ 60 giây.
 
+![CVD Analytics & Benchmark](docs/cvd_benchmark.png)
+
 ### D. Xếp Hạng Ví Cá Voi (Whale Leaderboard)
 - Nhóm và tổng hợp khối lượng giao dịch theo địa chỉ ví người gửi (`sender`).
 - Xếp hạng các ví có tổng volume lớn nhất trong phiên, phân tách rõ khối lượng Mua ròng và Bán ròng kèm liên kết trực tiếp sang Etherscan hoặc Solscan.
@@ -95,6 +101,10 @@ $$\text{CVD} = \text{Buy Volume} - \text{Sell Volume}$$
 
 ```text
 dex-whale-sentinel/
+├── docs/
+│   ├── terminal_preview.png  # Giao diện Trading Terminal
+│   ├── pipeline_architecture.png # Sơ đồ kiến trúc streaming
+│   └── cvd_benchmark.png     # Biểu đồ phân tích CVD & volume
 ├── src/
 │   ├── config.py             # Cấu hình pools, thresholds, timeouts
 │   ├── ingestion/
@@ -151,9 +161,13 @@ Truy cập trình duyệt tại địa chỉ: `http://localhost:8000`
 **DEX-Whale-Sentinel** is a high-throughput, low-latency real-time cryptocurrency DEX stream ingestion and anomaly detection pipeline built with **Python (FastAPI, AsyncIO, WebSockets)**. It connects directly to live on-chain decentralized exchange data via the **DexPaprika API** (covering Ethereum, Solana, Base, and Arbitrum).
 
 
+![Trading Terminal Preview](docs/terminal_preview.png)
+
 ---
 
 ## 1. System Architecture
+
+![Pipeline Architecture](docs/pipeline_architecture.png)
 
 ```text
 DexPaprika API (REST / SSE)
@@ -209,6 +223,8 @@ DexPaprika API (REST / SSE)
 - **Time-Series Bucket Aggregation:** Groups trades into 1-minute intervals to plot net buy/sell volumes and cumulative delta curves over 30-minute rolling periods.
 - **Whale Wallet Profiling:** Aggregates transaction volumes by sender address to rank the most active smart money wallets in the session.
 - **Data Export & Alert Dispatch:** Features one-click client-side CSV exports and configurable alert routing for Telegram / Discord webhooks.
+
+![CVD Analytics & Benchmark](docs/cvd_benchmark.png)
 
 ---
 
