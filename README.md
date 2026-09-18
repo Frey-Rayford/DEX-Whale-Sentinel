@@ -9,7 +9,6 @@
 
 Hệ thống thu thập, xử lý và giám sát luồng giao dịch Crypto DEX thời gian thực (Real-time Stream Pipeline) với độ trễ thấp, kết nối trực tiếp dữ liệu on-chain từ **DexPaprika API** (hỗ trợ Ethereum, Solana, Base, Arbitrum), phát hiện các lệnh cá voi (Whale Alert) và tính toán chỉ số chênh lệch khối lượng mua/bán (Cumulative Volume Delta - CVD) trên cửa sổ trượt (Sliding Window).
 
-Dự án sở hữu giao diện **Trading Terminal (Bloomberg / Linear Lite)** tối giản, độ đặc thông tin cao, sử dụng font monospaced chuẩn số học tài chính và **hoàn toàn không sử dụng phong cách đồ họa AI slop**.
 
 ---
 
@@ -151,7 +150,6 @@ Truy cập trình duyệt tại địa chỉ: `http://localhost:8000`
 
 **DEX-Whale-Sentinel** is a high-throughput, low-latency real-time cryptocurrency DEX stream ingestion and anomaly detection pipeline built with **Python (FastAPI, AsyncIO, WebSockets)**. It connects directly to live on-chain decentralized exchange data via the **DexPaprika API** (covering Ethereum, Solana, Base, and Arbitrum).
 
-The project features an **Institutional-Grade Trading Terminal** (Bloomberg / Linear style) with high information density, 4 specialized navigation views, tabular monospaced numbers, live 1-minute CVD charts, whale wallet leaderboard, CSV data exports, and zero AI-slop visual clutter.
 
 ---
 
