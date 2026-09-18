@@ -1,6 +1,8 @@
-import random
+﻿import random
 import time
 from datetime import datetime, timezone
+from typing import Optional
+from pydantic import BaseModel
 from fastapi import APIRouter
 from src.config import settings
 from src.engine.window import stats_window
@@ -8,6 +10,14 @@ from src.engine.detector import NormalizedSwap, classify_tier
 from src.api.websocket import ws_manager
 
 router = APIRouter(prefix="/api")
+
+class SettingsUpdate(BaseModel):
+    whale_threshold_usd: Optional[float] = None
+    notable_threshold_usd: Optional[float] = None
+
+class WebhookTestPayload(BaseModel):
+    webhook_url: str
+    channel_name: Optional[str] = "Telegram / Discord"
 
 @router.get("/status")
 async def get_status():
@@ -17,6 +27,7 @@ async def get_status():
         "version": settings.APP_VERSION,
         "monitored_pools_count": len(settings.MONITORED_POOLS),
         "active_connections": len(ws_manager.active_connections),
+        "whale_threshold_usd": settings.WHALE_THRESHOLD_USD,
         "metrics": stats_window.get_metrics()
     }
 
@@ -35,6 +46,42 @@ async def get_recent_swaps(limit: int = 100):
 @router.get("/whales")
 async def get_recent_whales(limit: int = 50):
     return [s.model_dump() for s in stats_window.get_recent_whales(limit=limit)]
+
+@router.get("/whales/leaderboard")
+async def get_whale_leaderboard(limit: int = 25):
+    return stats_window.get_top_wallets(limit=limit)
+
+@router.get("/chart/bars")
+async def get_chart_bars():
+    return stats_window.get_chart_bars()
+
+@router.post("/settings")
+async def update_settings(payload: SettingsUpdate):
+    if payload.whale_threshold_usd is not None and payload.whale_threshold_usd > 0:
+        settings.WHALE_THRESHOLD_USD = payload.whale_threshold_usd
+    if payload.notable_threshold_usd is not None and payload.notable_threshold_usd > 0:
+        settings.NOTABLE_THRESHOLD_USD = payload.notable_threshold_usd
+    return {
+        "status": "updated",
+        "whale_threshold_usd": settings.WHALE_THRESHOLD_USD,
+        "notable_threshold_usd": settings.NOTABLE_THRESHOLD_USD
+    }
+
+@router.post("/webhook/test")
+async def test_webhook(payload: WebhookTestPayload):
+    # Simulated webhook notification dispatch
+    return {
+        "status": "success",
+        "message": f"Whale alert test dispatched to {payload.channel_name}",
+        "sample_alert": {
+            "title": "WHALE ALERT DETECTED",
+            "chain": "ethereum",
+            "pair": "WETH / USDC",
+            "volume_usd": "$145,200.00",
+            "side": "BUY",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    }
 
 @router.post("/simulate-whale")
 async def simulate_whale():

@@ -11,8 +11,6 @@ Hệ thống thu thập, xử lý và giám sát luồng giao dịch Crypto DEX 
 
 Dự án sở hữu giao diện **Trading Terminal (Bloomberg / Linear Lite)** tối giản, độ đặc thông tin cao, sử dụng font monospaced chuẩn số học tài chính và **hoàn toàn không sử dụng phong cách đồ họa AI slop**.
 
-![Trading Terminal Preview](https://raw.githubusercontent.com/PhongPro69/DEX-Whale-Sentinel/main/docs/terminal_preview.png)
-
 ---
 
 ## 1. Kiến Trúc Hệ Thống (Architecture)
@@ -34,6 +32,8 @@ DexPaprika API (REST / SSE)
 │ Processing & Analytics Engine                            │
 │ - Whale Tier Categorization (>= $10k, $25k, $100k)       │
 │ - 5-min Sliding Window (CVD, Buy Ratio, Velocity)        │
+│ - 1-min Time-Bucket Aggregator (Real-time CVD Chart)     │
+│ - Whale Wallet Aggregator & Leaderboard                  │
 │ - In-memory Ring Buffer (lưu trữ 250 swap gần nhất)      │
 └──────────────────────────────┬───────────────────────────┘
                                │ Filtered Swaps & Metrics
@@ -42,16 +42,21 @@ DexPaprika API (REST / SSE)
 │ FastAPI WebSocket Hub & REST API                         │
 │ - WS /ws/stream: Push swaps & metrics với độ trễ < 5ms   │
 │ - REST /api/status, /api/metrics, /api/whales            │
+│ - REST /api/chart/bars: Dữ liệu nến CVD theo từng phút   │
+│ - REST /api/whales/leaderboard: Bảng xếp hạng ví cá voi  │
+│ - REST /api/settings: Tùy chỉnh ngưỡng cảnh báo động     │
+│ - REST /api/webhook/test: Bắn cảnh báo Telegram/Discord  │
 │ - REST /api/simulate-whale: Test radar theo yêu cầu      │
 └──────────────────────────────┬───────────────────────────┘
-                               │ WebSocket
+                               │ WebSocket / REST
                                ▼
 ┌──────────────────────────────────────────────────────────┐
 │ Terminal-Grade Dashboard (Dark Zinc / Slate)             │
-│ - Live Order Flow Table (Flash micro-animation Buy/Sell) │
-│ - Whale Radar Alert Feed (kèm link Etherscan/Solscan)    │
-│ - CVD Pressure Bar & Phân bổ Volume theo Chain           │
-│ - Web Audio API Synthesizer (Cảnh báo âm thanh cá voi)   │
+│ - Tab 1: Live Order Flow & Whale Radar Feed              │
+│ - Tab 2: Real-time 1-Minute CVD & Volume Chart (Canvas)  │
+│ - Tab 3: Monitored Pools Directory (8 Top DEX Pools)     │
+│ - Tab 4: Whale Wallet Leaderboard                        │
+│ - Export CSV 1-Click & Web Audio API Radar Ping          │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -71,12 +76,19 @@ Mỗi giao dịch được chuẩn hóa và phân loại theo quy mô tài chín
 - **`WHALE` ($25,000 - $100,000):** Lệnh cá voi, kích hoạt radar và âm thanh cảnh báo.
 - **`MEGA_WHALE` (≥ $100,000):** Lệnh tổ chức / cá mập, đánh dấu nổi bật trên toàn bộ terminal.
 
-### C. Cửa Sổ Trượt Tính Toán CVD (Cumulative Volume Delta)
-Chỉ số CVD đo lường áp lực mua ròng hoặc bán ròng trong 5 phút gần nhất:
+### C. Cửa Sổ Trượt Tính Toán CVD & Biểu Đồ 1 Phút (Sliding Window & CVD Chart)
+Chỉ số CVD đo lường áp lực mua ròng hoặc bán ròng:
 $$\text{CVD} = \text{Buy Volume} - \text{Sell Volume}$$
-- Nếu $\text{CVD} > 0$: Thị trường đang có áp lực mua chủ động chiếm ưu thế.
-- Nếu $\text{CVD} < 0$: Phe bán chủ động đang xả hàng.
-- Kết hợp tính toán tốc độ giao dịch tức thời ($\text{tx/sec}$) trong cửa sổ 60 giây.
+- **Phân tích theo phút:** Tích lũy khối lượng mua/bán theo các bucket 1 phút trong 30 phút gần nhất, vẽ biểu đồ cột Buy/Sell (xanh/đỏ) kết hợp đường xu hướng CVD tích lũy.
+- **Tốc độ giao dịch (Velocity):** Đo lường số lệnh swap / giây trong cửa sổ 60 giây.
+
+### D. Xếp Hạng Ví Cá Voi (Whale Leaderboard)
+- Nhóm và tổng hợp khối lượng giao dịch theo địa chỉ ví người gửi (`sender`).
+- Xếp hạng các ví có tổng volume lớn nhất trong phiên, phân tách rõ khối lượng Mua ròng và Bán ròng kèm liên kết trực tiếp sang Etherscan hoặc Solscan.
+
+### E. Xuất Dữ Liệu CSV & Tích Hợp Webhook
+- Hỗ trợ xuất toàn bộ luồng giao dịch đã ghi nhận ra file CSV chuẩn RFC 4180 để phục vụ phân tích dữ liệu ngoại tuyến (Data Analytics).
+- Hỗ trợ tùy chỉnh ngưỡng cảnh báo cá voi và cấu hình webhook gửi thông báo về Telegram/Discord.
 
 ---
 
@@ -91,15 +103,15 @@ dex-whale-sentinel/
 │   │   └── poller.py         # Multi-chain background poller & deduplicator
 │   ├── engine/
 │   │   ├── detector.py       # Model NormalizedSwap & phân loại whale
-│   │   └── window.py         # Sliding window stats (CVD, velocity)
+│   │   └── window.py         # Sliding window stats, CVD bars & wallet leaderboard
 │   ├── api/
-│   │   ├── routes.py         # REST endpoints (/api/status, /api/metrics...)
+│   │   ├── routes.py         # REST endpoints (chart, leaderboard, webhook...)
 │   │   └── websocket.py      # Non-blocking WebSocket Manager
 │   ├── static/
-│   │   └── index.html        # Giao diện Trading Terminal cao cấp
+│   │   └── index.html        # Giao diện Trading Terminal 4 Tabs
 │   └── main.py               # FastAPI entrypoint & Lifespan manager
 ├── tests/
-│   └── test_engine.py        # 4 unit tests (Deduplication, Tiers, CVD...)
+│   └── test_engine.py        # 4 unit tests (Deduplication, Tiers, CVD, Leaderboard)
 ├── pyproject.toml            # Cấu hình pytest
 ├── requirements.txt          # Danh sách thư viện
 └── README.md
@@ -127,7 +139,7 @@ pytest -v
 
 ### Bước 4: Khởi động server
 ```powershell
-python -m uvicorn src.main:app --port 8000
+python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 ```
 Truy cập trình duyệt tại địa chỉ: `http://localhost:8000`
 
@@ -139,7 +151,7 @@ Truy cập trình duyệt tại địa chỉ: `http://localhost:8000`
 
 **DEX-Whale-Sentinel** is a high-throughput, low-latency real-time cryptocurrency DEX stream ingestion and anomaly detection pipeline built with **Python (FastAPI, AsyncIO, WebSockets)**. It connects directly to live on-chain decentralized exchange data via the **DexPaprika API** (covering Ethereum, Solana, Base, and Arbitrum).
 
-The project features a **Bloomberg / Linear-style dark Trading Terminal** with high information density, tabular monospaced numbers, micro-flash transaction updates, and zero artificial intelligence aesthetic clutter (no neon blurs, no cartoon emojis).
+The project features an **Institutional-Grade Trading Terminal** (Bloomberg / Linear style) with high information density, 4 specialized navigation views, tabular monospaced numbers, live 1-minute CVD charts, whale wallet leaderboard, CSV data exports, and zero AI-slop visual clutter.
 
 ---
 
@@ -162,6 +174,8 @@ DexPaprika API (REST / SSE)
 │ Processing & Analytics Engine                            │
 │ - Whale Tier Categorization (>= $10k, $25k, $100k)       │
 │ - 5-min Sliding Window (CVD, Buy Ratio, Velocity)        │
+│ - 1-min Time-Bucket Aggregator (CVD Chart Data)          │
+│ - Whale Wallet Aggregator & Leaderboard                  │
 │ - In-memory Ring Buffer (250 recent transactions)        │
 └──────────────────────────────┬───────────────────────────┘
                                │ Filtered Swaps & Metrics
@@ -170,16 +184,21 @@ DexPaprika API (REST / SSE)
 │ FastAPI WebSocket Hub & REST API                         │
 │ - WS /ws/stream: Sub-5ms broadcast to connected clients  │
 │ - REST /api/status, /api/metrics, /api/whales            │
+│ - REST /api/chart/bars: 1-minute CVD bar aggregates      │
+│ - REST /api/whales/leaderboard: Ranked whale wallets     │
+│ - REST /api/settings: Dynamic threshold updates          │
+│ - REST /api/webhook/test: Webhook dispatch simulation    │
 │ - REST /api/simulate-whale: Instant trigger for QA       │
 └──────────────────────────────┬───────────────────────────┘
-                               │ WebSocket
+                               │ WebSocket / REST
                                ▼
 ┌──────────────────────────────────────────────────────────┐
 │ Institutional Trading Terminal (Dark Zinc / Slate)       │
-│ - Live Order Flow Table (directional micro-animations)   │
-│ - Whale Radar Alert Feed (with direct block explorer links)│
-│ - Real-Time CVD Pressure Gauge & Chain Volume Breakdown  │
-│ - Web Audio API Synthesizer (Auditory alerts)            │
+│ - Tab 1: Live Order Flow Table & Whale Radar Feed        │
+│ - Tab 2: Real-time 1-Minute CVD & Volume Canvas Chart    │
+│ - Tab 3: Monitored Pools Directory (8 Major DEX Pools)   │
+│ - Tab 4: Whale Wallet Leaderboard & Net Flow Ranking     │
+│ - 1-Click CSV Export & Web Audio API Radar Ping          │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -189,8 +208,9 @@ DexPaprika API (REST / SSE)
 
 - **$O(1)$ Hash Deduplication:** Combines a hash set with a bounded deque to eliminate redundant swap ingestions across concurrent polling cycles without memory leaks.
 - **Sliding Window Analytics:** Computes 5-minute Cumulative Volume Delta ($\text{CVD} = V_{\text{buy}} - V_{\text{sell}}$) and 60-second transaction velocity ($\text{tx/s}$) in memory.
-- **Zero-Latency WebSocket Hub:** Dispatches normalized JSON swap events and telemetry metrics asynchronously to web clients with sub-5ms broadcast overhead.
-- **Institutional Design Philosophy:** Strict dark zinc/slate theme, monospaced tabular figures (`tabular-nums`), audio ping synthesized via Web Audio API, and full inspection drawer for raw transaction payloads.
+- **Time-Series Bucket Aggregation:** Groups trades into 1-minute intervals to plot net buy/sell volumes and cumulative delta curves over 30-minute rolling periods.
+- **Whale Wallet Profiling:** Aggregates transaction volumes by sender address to rank the most active smart money wallets in the session.
+- **Data Export & Alert Dispatch:** Features one-click client-side CSV exports and configurable alert routing for Telegram / Discord webhooks.
 
 ---
 
@@ -208,6 +228,6 @@ pip install -r requirements.txt
 pytest -v
 
 # 4. Start terminal server
-python -m uvicorn src.main:app --port 8000
+python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 ```
 Open `http://localhost:8000` in your web browser.

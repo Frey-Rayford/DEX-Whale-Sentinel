@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 import time
 from src.config import MonitoredPool, settings
 from src.engine.detector import classify_tier, parse_raw_transaction, NormalizedSwap
@@ -37,7 +37,7 @@ def test_parse_raw_transaction():
         "id": "0xabc123",
         "token_0_symbol": "WETH",
         "token_1_symbol": "USDC",
-        "amount_0": -10.0,  # Negative means BUY base token
+        "amount_0": -10.0,
         "amount_1": 25000.0,
         "volume_0": 10.0,
         "volume_1": 25000.0,
@@ -61,7 +61,6 @@ def test_parse_raw_transaction():
 def test_sliding_window_cvd():
     window = SlidingWindowStats(window_seconds=10)
     
-    # 1 BUY of 30,000 USD
     s1 = NormalizedSwap(
         id="tx_buy",
         chain="ethereum",
@@ -83,7 +82,6 @@ def test_sliding_window_cvd():
         explorer_url="https://etherscan.io/tx/0x1"
     )
     
-    # 1 SELL of 10,000 USD
     s2 = NormalizedSwap(
         id="tx_sell",
         chain="base",
@@ -111,8 +109,19 @@ def test_sliding_window_cvd():
     metrics = window.get_metrics()
     assert metrics["buy_volume_5m"] == 30000.0
     assert metrics["sell_volume_5m"] == 10000.0
-    assert metrics["cvd_5m"] == 20000.0  # 30k - 10k
-    assert metrics["buy_ratio"] == 75.0   # 30k / 40k
+    assert metrics["cvd_5m"] == 20000.0
+    assert metrics["buy_ratio"] == 75.0
     assert metrics["whale_count_5m"] == 1
-    assert metrics["chain_volumes"]["ethereum"] == 30000.0
-    assert metrics["chain_volumes"]["base"] == 10000.0
+
+    # Check top wallets
+    wallets = window.get_top_wallets()
+    assert len(wallets) == 2
+    assert wallets[0]["address"] == "0xa"
+    assert wallets[0]["total_volume_usd"] == 30000.0
+
+    # Check chart bars
+    bars = window.get_chart_bars()
+    assert len(bars) >= 1
+    assert bars[0]["buy_volume"] == 30000.0
+    assert bars[0]["sell_volume"] == 10000.0
+    assert bars[0]["cumulative_cvd"] == 20000.0

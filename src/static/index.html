@@ -95,6 +95,7 @@
       border: 1px solid var(--border-subtle);
       cursor: pointer;
       transition: all 0.15s;
+      user-select: none;
     }
     .filter-btn:hover {
       color: var(--text-main);
@@ -106,77 +107,124 @@
       background: #1e293b;
       border-color: #475569;
     }
+
+    .nav-tab-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav-tab-btn:hover {
+      color: var(--text-main);
+      background: #131926;
+    }
+    .nav-tab-btn.active {
+      color: #ffffff;
+      background: #182235;
+      border-color: #273652;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-  <!-- TOP STATUS & CONTROL BAR -->
-  <header class="bg-[#0c1018] border-b border-[#1a2233] px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30">
+  <!-- TOP HEADER & CONTROLS -->
+  <header class="bg-[#0c1018] border-b border-[#1a2233] px-4 py-2 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30">
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2">
         <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-live"></div>
         <span class="font-bold tracking-tight text-white text-sm">DEX-WHALE-SENTINEL</span>
       </div>
       <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-[#161f30] text-blue-400 border border-[#22314d]">
-        v1.0.0 Realtime
+        v1.1.0 Realtime
       </span>
-      <div class="hidden sm:flex items-center gap-1 text-[11px] text-slate-400 pl-2 border-l border-[#1e2638]">
-        <span>Engine:</span>
-        <span id="stat-engine-status" class="text-emerald-400 font-mono font-medium">STREAMING DEXPAPRIKA</span>
-      </div>
+
+      <!-- Primary Navigation Tabs -->
+      <nav class="hidden md:flex items-center gap-1 pl-3 border-l border-[#1e2638]">
+        <button id="tab-nav-stream" class="nav-tab-btn active" onclick="switchNavTab('stream')">
+          <span>⚡ Live Stream & Radar</span>
+        </button>
+        <button id="tab-nav-chart" class="nav-tab-btn" onclick="switchNavTab('chart')">
+          <span>📊 Realtime CVD Chart</span>
+        </button>
+        <button id="tab-nav-pools" class="nav-tab-btn" onclick="switchNavTab('pools')">
+          <span>💧 DEX Pools (8)</span>
+        </button>
+        <button id="tab-nav-whales" class="nav-tab-btn" onclick="switchNavTab('whales')">
+          <span>🐋 Whale Leaderboard</span>
+        </button>
+      </nav>
     </div>
 
-    <!-- Live 5-Min Summary Telemetry -->
-    <div class="flex items-center gap-4 text-xs">
-      <div class="hidden md:flex items-center gap-1.5">
+    <!-- Live Telemetry Stats & Action Buttons -->
+    <div class="flex items-center gap-3 text-xs">
+      <div class="hidden lg:flex items-center gap-1.5">
         <span class="text-slate-400 text-[11px] uppercase tracking-wider">Velocity:</span>
         <span id="stat-velocity" class="mono font-semibold text-slate-200">0.0 tx/s</span>
       </div>
 
-      <div class="hidden lg:flex items-center gap-1.5 pl-3 border-l border-[#1e2638]">
-        <span class="text-slate-400 text-[11px] uppercase tracking-wider">5m Volume:</span>
+      <div class="hidden xl:flex items-center gap-1.5 pl-3 border-l border-[#1e2638]">
+        <span class="text-slate-400 text-[11px] uppercase tracking-wider">5m Vol:</span>
         <span id="stat-volume-5m" class="mono font-semibold text-slate-100">$0.00</span>
       </div>
 
-      <!-- CVD Buy/Sell Bar Gauge -->
-      <div class="flex items-center gap-2 pl-3 border-l border-[#1e2638]">
-        <div class="flex flex-col items-end">
-          <div class="flex items-center gap-1">
-            <span class="text-[10px] uppercase tracking-wider text-slate-400">5m CVD:</span>
-            <span id="stat-cvd-val" class="mono font-semibold text-emerald-400">+$0</span>
-          </div>
+      <!-- CVD Gauge -->
+      <div class="flex items-center gap-2 pl-2 border-l border-[#1e2638]">
+        <div class="flex items-center gap-1">
+          <span class="text-[10px] uppercase tracking-wider text-slate-400">CVD:</span>
+          <span id="stat-cvd-val" class="mono font-semibold text-emerald-400">+$0</span>
         </div>
-        <div class="w-20 bg-[#161d2b] h-2 rounded-full overflow-hidden flex" title="Buy vs Sell Pressure Ratio">
+        <div class="w-16 bg-[#161d2b] h-2 rounded-full overflow-hidden flex" title="Buy vs Sell Ratio">
           <div id="cvd-buy-bar" class="bg-emerald-500 h-full transition-all duration-300" style="width: 50%;"></div>
           <div id="cvd-sell-bar" class="bg-rose-500 h-full transition-all duration-300" style="width: 50%;"></div>
         </div>
-        <span id="stat-buy-pct" class="mono text-[11px] text-slate-400 font-medium">50% B</span>
       </div>
 
-      <!-- Actions -->
-      <div class="flex items-center gap-1.5 pl-3 border-l border-[#1e2638]">
-        <button id="btn-sound" onclick="toggleSound()" class="filter-btn text-[11px] flex items-center gap-1" title="Bật/Tắt âm thanh cảnh báo cá voi">
-          <span id="sound-icon">🔊</span> <span id="sound-text">Alert On</span>
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-1.5 pl-2 border-l border-[#1e2638]">
+        <button onclick="exportCSV()" class="filter-btn text-[11px] flex items-center gap-1 text-slate-300" title="Xuất toàn bộ giao dịch đã ghi nhận ra file CSV">
+          <span>⬇</span> <span>Export CSV</span>
+        </button>
+        <button onclick="openSettingsModal()" class="filter-btn text-[11px] flex items-center gap-1" title="Cài đặt ngưỡng cá voi & webhook">
+          <span>⚙</span> <span>Settings</span>
+        </button>
+        <button id="btn-sound" onclick="toggleSound()" class="filter-btn text-[11px]" title="Bật/Tắt âm thanh cảnh báo cá voi">
+          <span id="sound-icon">🔊</span>
         </button>
         <button id="btn-pause" onclick="togglePause()" class="filter-btn text-[11px]">
           Pause
         </button>
-        <button onclick="triggerSimulatedWhale()" class="filter-btn text-[11px] text-amber-300 border-amber-800/60 bg-amber-950/20 hover:bg-amber-900/30" title="Kích hoạt lệnh cá voi mẫu để kiểm tra radar">
+        <button onclick="triggerSimulatedWhale()" class="filter-btn text-[11px] text-amber-300 border-amber-800/60 bg-amber-950/20 hover:bg-amber-900/30 font-semibold" title="Bắn lệnh cá voi mẫu để test radar">
           ⚡ Sim Whale
         </button>
       </div>
     </div>
   </header>
 
-  <!-- MAIN TERMINAL GRID -->
-  <main class="flex-1 flex flex-col lg:flex-row gap-0 overflow-hidden">
+  <!-- Mobile Sub-Nav (Visible only on small screens) -->
+  <div class="md:hidden flex items-center gap-1 px-3 py-1.5 bg-[#0e131d] border-b border-[#1c2638] overflow-x-auto text-xs">
+    <button class="filter-btn active" onclick="switchNavTab('stream')">Stream</button>
+    <button class="filter-btn" onclick="switchNavTab('chart')">Chart</button>
+    <button class="filter-btn" onclick="switchNavTab('pools')">Pools</button>
+    <button class="filter-btn" onclick="switchNavTab('whales')">Leaderboard</button>
+  </div>
 
-    <!-- LEFT COLUMN: LIVE ORDER FLOW STREAM (70%) -->
+  <!-- ════════════════ VIEW 1: LIVE ORDER FLOW & RADAR ════════════════ -->
+  <main id="view-stream" class="flex-1 flex flex-col lg:flex-row gap-0 overflow-hidden">
+
+    <!-- LEFT: LIVE STREAM TABLE (70%) -->
     <section class="flex-1 flex flex-col border-b lg:border-b-0 lg:border-r border-[#1a2233] bg-[#090d14] min-w-0">
 
       <!-- Stream Filter Toolbar -->
       <div class="px-3 py-2 bg-[#0c111a] border-b border-[#171f2f] flex flex-wrap items-center justify-between gap-2 text-xs">
-        <!-- Chain Filters -->
         <div class="flex items-center gap-1">
           <span class="text-[11px] text-slate-400 uppercase font-semibold mr-1">Chain:</span>
           <button class="filter-btn active" onclick="setChainFilter('ALL', this)">ALL</button>
@@ -186,7 +234,6 @@
           <button class="filter-btn" onclick="setChainFilter('solana', this)">Solana</button>
         </div>
 
-        <!-- Volume Size Filters -->
         <div class="flex items-center gap-1">
           <span class="text-[11px] text-slate-400 uppercase font-semibold mr-1">Size:</span>
           <button class="filter-btn active" onclick="setSizeFilter(0, this)">All Sizes</button>
@@ -199,7 +246,7 @@
         </div>
       </div>
 
-      <!-- Table Column Headers -->
+      <!-- Column Headers -->
       <div class="tabular-row bg-[#0b0f17] text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-[#1a2233] select-none">
         <div>TIME</div>
         <div>CHAIN</div>
@@ -214,10 +261,10 @@
 
       <!-- Live Rows Container -->
       <div id="stream-container" class="flex-1 overflow-y-auto font-mono text-[12px] divide-y divide-[#131926]">
-        <!-- Dynamic swap rows injected here -->
+        <!-- Swaps injected here -->
       </div>
 
-      <!-- Bottom Stream Summary Status -->
+      <!-- Bottom Status Bar -->
       <div class="px-3 py-1.5 bg-[#0b0f17] border-t border-[#1a2233] flex items-center justify-between text-[11px] text-slate-400 font-mono">
         <div>
           <span>Ingested Total: </span>
@@ -233,10 +280,8 @@
       </div>
     </section>
 
-    <!-- RIGHT COLUMN: WHALE RADAR & TIME-SERIES METRICS (30%) -->
+    <!-- RIGHT: WHALE RADAR (30%) -->
     <aside class="w-full lg:w-96 flex flex-col bg-[#0b0e16] min-w-0">
-
-      <!-- Whale Radar Header -->
       <div class="px-3 py-2 bg-[#0d121c] border-b border-[#171f2f] flex items-center justify-between">
         <div class="flex items-center gap-2">
           <span class="text-amber-400 text-sm">⚡</span>
@@ -247,14 +292,13 @@
         </span>
       </div>
 
-      <!-- Whale Cards Scroll Container -->
       <div id="whale-radar-container" class="flex-1 overflow-y-auto p-2 space-y-2 max-h-[50vh] lg:max-h-[62vh]">
         <div id="whale-empty-placeholder" class="text-center py-12 text-slate-400 text-xs">
           Đang dò quét các lệnh giao dịch lớn (≥ $25,000)...
         </div>
       </div>
 
-      <!-- 5-Min Chain Volume Distribution Card -->
+      <!-- 5-Min Volume by Chain -->
       <div class="p-3 bg-[#0d121c] border-t border-[#1a2233] space-y-2.5">
         <div class="flex items-center justify-between text-xs">
           <span class="font-bold text-slate-300 uppercase tracking-wider text-[11px]">5m Volume by Network</span>
@@ -303,19 +347,174 @@
           </div>
         </div>
 
-        <!-- Monitored Pools Info -->
         <div class="pt-2 border-t border-[#171f2f] text-[11px] text-slate-400">
           <div class="flex justify-between items-center">
-            <span>Active Feed Sources:</span>
-            <span class="text-slate-300 font-mono font-medium">8 DEX Pools</span>
-          </div>
-          <div class="text-[10px] text-slate-400 mt-0.5">
-            Uniswap V3/V4, Aerodrome, Orca via DexPaprika Stream
+            <span>Feed Protocol:</span>
+            <span class="text-emerald-400 font-mono font-medium">DexPaprika Realtime SSE</span>
           </div>
         </div>
       </div>
     </aside>
   </main>
+
+  <!-- ════════════════ VIEW 2: REALTIME CVD CHART ════════════════ -->
+  <section id="view-chart" class="flex-1 hidden p-4 bg-[#080a0f] overflow-y-auto">
+    <div class="max-w-6xl mx-auto space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-[#1c2638]">
+        <div>
+          <h2 class="text-base font-bold text-slate-100 tracking-tight">Real-Time Cumulative Volume Delta (CVD)</h2>
+          <p class="text-xs text-slate-400">Phân tích áp lực Mua ròng vs Bán ròng và diễn biến dòng tiền theo từng phút (1-Minute Aggregated Bars)</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="refreshChartData()" class="filter-btn text-xs px-2.5 py-1">Làm mới dữ liệu</button>
+        </div>
+      </div>
+
+      <!-- CVD Metric Summary Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono">
+        <div class="p-3 bg-[#0d121c] border border-[#1c2638] rounded-lg">
+          <div class="text-[11px] text-slate-400 uppercase font-semibold">Net 30m CVD (Delta)</div>
+          <div id="chart-net-cvd" class="text-xl font-bold text-emerald-400 mt-1">+$0.00</div>
+          <div class="text-[10px] text-slate-500 mt-0.5">Tổng khối lượng Mua trừ Bán</div>
+        </div>
+        <div class="p-3 bg-[#0d121c] border border-[#1c2638] rounded-lg">
+          <div class="text-[11px] text-slate-400 uppercase font-semibold">Total Buy Volume</div>
+          <div id="chart-total-buy" class="text-xl font-bold text-emerald-400 mt-1">$0.00</div>
+          <div class="text-[10px] text-slate-500 mt-0.5">Khối lượng mua chủ động</div>
+        </div>
+        <div class="p-3 bg-[#0d121c] border border-[#1c2638] rounded-lg">
+          <div class="text-[11px] text-slate-400 uppercase font-semibold">Total Sell Volume</div>
+          <div id="chart-total-sell" class="text-xl font-bold text-rose-400 mt-1">$0.00</div>
+          <div class="text-[10px] text-slate-500 mt-0.5">Khối lượng bán chủ động</div>
+        </div>
+      </div>
+
+      <!-- Canvas Chart Container -->
+      <div class="p-4 bg-[#0d121c] border border-[#1c2638] rounded-lg space-y-2">
+        <div class="flex items-center justify-between text-xs text-slate-400">
+          <div class="flex items-center gap-3">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-emerald-500 inline-block rounded-xs"></span> Net Buy Minute</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-rose-500 inline-block rounded-xs"></span> Net Sell Minute</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-sky-400 inline-block"></span> Cumulative Delta Line</span>
+          </div>
+          <span class="text-[11px] font-mono">Window: Last 30 minutes</span>
+        </div>
+        <div class="w-full h-80 relative">
+          <canvas id="cvd-canvas" class="w-full h-full rounded"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════ VIEW 3: MONITORED POOLS DIRECTORY ════════════════ -->
+  <section id="view-pools" class="flex-1 hidden p-4 bg-[#080a0f] overflow-y-auto">
+    <div class="max-w-6xl mx-auto space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-[#1c2638]">
+        <div>
+          <h2 class="text-base font-bold text-slate-100 tracking-tight">Monitored Liquidity Pools (8 Pools)</h2>
+          <p class="text-xs text-slate-400">Danh sách các pool thanh khoản top volume trên Ethereum, Base, Arbitrum và Solana đang kết nối qua DexPaprika</p>
+        </div>
+      </div>
+
+      <div class="border border-[#1c2638] rounded-lg overflow-hidden bg-[#0d121c]">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-[#121824] text-[10px] font-mono uppercase text-slate-400 border-b border-[#1c2638]">
+            <tr>
+              <th class="py-2.5 px-3">Network</th>
+              <th class="py-2.5 px-3">DEX Protocol</th>
+              <th class="py-2.5 px-3">Pair Label</th>
+              <th class="py-2.5 px-3">Pool Contract</th>
+              <th class="py-2.5 px-3 text-right">Explorer Link</th>
+            </tr>
+          </thead>
+          <tbody id="pools-table-body" class="divide-y divide-[#17202f] font-mono">
+            <!-- Dynamic pool rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════ VIEW 4: WHALE LEADERBOARD ════════════════ -->
+  <section id="view-whales" class="flex-1 hidden p-4 bg-[#080a0f] overflow-y-auto">
+    <div class="max-w-6xl mx-auto space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-[#1c2638]">
+        <div>
+          <h2 class="text-base font-bold text-slate-100 tracking-tight">Whale Wallet Leaderboard</h2>
+          <p class="text-xs text-slate-400">Xếp hạng các địa chỉ ví gom và xả khối lượng lớn nhất trong phiên giao dịch hiện tại</p>
+        </div>
+        <button onclick="refreshLeaderboard()" class="filter-btn text-xs px-2.5 py-1">Làm mới danh sách</button>
+      </div>
+
+      <div class="border border-[#1c2638] rounded-lg overflow-hidden bg-[#0d121c]">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-[#121824] text-[10px] font-mono uppercase text-slate-400 border-b border-[#1c2638]">
+            <tr>
+              <th class="py-2.5 px-3 text-center w-12">#</th>
+              <th class="py-2.5 px-3">Wallet Address</th>
+              <th class="py-2.5 px-3">Chain</th>
+              <th class="py-2.5 px-3 text-right">Total Volume (USD)</th>
+              <th class="py-2.5 px-3 text-right text-emerald-400">Buy Vol</th>
+              <th class="py-2.5 px-3 text-right text-rose-400">Sell Vol</th>
+              <th class="py-2.5 px-3 text-center">Tx Count</th>
+              <th class="py-2.5 px-3 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="whales-table-body" class="divide-y divide-[#17202f] font-mono">
+            <!-- Dynamic whale wallet rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS & ALERT CONFIG MODAL -->
+  <div id="settings-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4" onclick="closeSettingsModal(event)">
+    <div class="bg-[#0e131d] border border-[#26334a] rounded-lg max-w-md w-full p-5 shadow-2xl space-y-4" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between border-b border-[#1c2638] pb-3">
+        <h3 class="font-bold text-slate-100 text-sm">Cài Đặt Cảnh Báo Cá Voi & Webhook</h3>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-400 font-semibold mb-1">Ngưỡng Cá Voi (Whale Alert Threshold - USD):</label>
+          <div class="flex items-center gap-2">
+            <span class="text-slate-500 font-mono">$</span>
+            <input id="setting-whale-threshold" type="number" min="1000" step="5000" value="25000" class="flex-1 bg-[#151c2a] border border-[#222e44] rounded px-2.5 py-1.5 text-slate-100 font-mono outline-none focus:border-blue-500">
+          </div>
+          <span class="text-[10px] text-slate-500 mt-1 block">Các lệnh swap vượt ngưỡng này sẽ phát âm thanh và thêm vào Whale Radar.</span>
+        </div>
+
+        <div class="pt-2 border-t border-[#1c2638]">
+          <label class="block text-slate-400 font-semibold mb-1">Tích Hợp Webhook (Telegram / Discord):</label>
+          <input id="setting-webhook-url" type="url" placeholder="https://discord.com/api/webhooks/... hoặc Telegram bot" class="w-full bg-[#151c2a] border border-[#222e44] rounded px-2.5 py-1.5 text-slate-100 font-mono text-[11px] outline-none focus:border-blue-500">
+          <div class="flex justify-between items-center mt-1.5">
+            <span class="text-[10px] text-slate-500">Bắn thông báo tự động khi phát hiện cá voi.</span>
+            <button onclick="testWebhookAlert()" class="filter-btn text-[10px] py-1 px-2 text-blue-400 border-blue-900 bg-blue-950/40 hover:bg-blue-900/60">
+              Test Webhook
+            </button>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-[#1c2638] flex items-center justify-between">
+          <span class="text-slate-300">Âm thanh cảnh báo (Web Audio Radar):</span>
+          <button id="modal-sound-toggle" onclick="toggleSound(); syncSoundButtonState();" class="filter-btn text-xs">
+            Bật âm thanh
+          </button>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-[#1c2638] flex justify-end gap-2">
+        <button onclick="saveSettings()" class="filter-btn text-xs px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white border-none font-semibold">
+          Lưu Cài Đặt
+        </button>
+        <button onclick="closeSettingsModal()" class="filter-btn text-xs px-3 py-1.5">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- TRANSACTION DETAIL MODAL INSPECTOR -->
   <div id="tx-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4" onclick="closeTxModal(event)">
@@ -370,29 +569,28 @@
     </div>
   </div>
 
-  <!-- APPLICATION JAVASCRIPT CLIENT -->
+  <!-- APPLICATION SCRIPT -->
   <script>
     let socket = null;
     let isPaused = false;
     let soundEnabled = true;
     let chainFilter = 'ALL';
     let minSizeFilter = 0;
+    let currentNavTab = 'stream';
     let totalSwapsIngested = 0;
     let totalVolumeIngested = 0;
-    const MAX_ROWS = 200;
+    const MAX_ROWS = 250;
     const allSwaps = [];
     const whaleSwaps = [];
+    let monitoredPoolsData = [];
 
+    // Web Audio Synthesizer (Zero asset dependency)
     let audioCtx = null;
     function playWhaleBeep() {
       if (!soundEnabled) return;
       try {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sine';
@@ -405,14 +603,19 @@
         osc.start();
         osc.stop(audioCtx.currentTime + 0.25);
       } catch (e) {
-        console.warn('Audio play failed:', e);
+        console.warn('Audio error:', e);
       }
     }
 
     function toggleSound() {
       soundEnabled = !soundEnabled;
+      syncSoundButtonState();
+    }
+
+    function syncSoundButtonState() {
       document.getElementById('sound-icon').textContent = soundEnabled ? '🔊' : '🔇';
-      document.getElementById('sound-text').textContent = soundEnabled ? 'Alert On' : 'Alert Off';
+      const mBtn = document.getElementById('modal-sound-toggle');
+      if (mBtn) mBtn.textContent = soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh';
     }
 
     function togglePause() {
@@ -421,6 +624,20 @@
       btn.textContent = isPaused ? 'Resume' : 'Pause';
       btn.classList.toggle('bg-amber-900/40', isPaused);
       btn.classList.toggle('text-amber-200', isPaused);
+    }
+
+    // Tab Navigation Switcher
+    function switchNavTab(tab) {
+      currentNavTab = tab;
+      ['stream', 'chart', 'pools', 'whales'].forEach(t => {
+        const viewEl = document.getElementById(`view-${t}`);
+        const navEl = document.getElementById(`tab-nav-${t}`);
+        if (viewEl) viewEl.classList.toggle('hidden', t !== tab);
+        if (navEl) navEl.classList.toggle('active', t !== tab);
+      });
+      if (tab === 'chart') refreshChartData();
+      if (tab === 'pools') renderPoolsDirectory();
+      if (tab === 'whales') refreshLeaderboard();
     }
 
     function setChainFilter(chain, el) {
@@ -442,6 +659,7 @@
       allSwaps.length = 0;
     }
 
+    // Number & String Formatters
     function formatUSD(val) {
       if (val >= 1_000_000) return '$' + (val / 1_000_000).toFixed(2) + 'M';
       if (val >= 1_000) return '$' + val.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -473,6 +691,7 @@
       return '<span class="text-slate-600 text-[10px]">-</span>';
     }
 
+    // Row Element Generator
     function createRowElement(swap, flash = true) {
       const row = document.createElement('div');
       row.className = 'tabular-row cursor-pointer';
@@ -532,7 +751,6 @@
       }
 
       if (isPaused) return;
-
       if (chainFilter !== 'ALL' && swap.chain.toLowerCase() !== chainFilter.toLowerCase()) return;
       if (swap.volume_usd < minSizeFilter) return;
 
@@ -548,16 +766,12 @@
     function renderFilteredRows() {
       const container = document.getElementById('stream-container');
       container.innerHTML = '';
-      
       const filtered = allSwaps.filter(s => {
         if (chainFilter !== 'ALL' && s.chain.toLowerCase() !== chainFilter.toLowerCase()) return false;
         if (s.volume_usd < minSizeFilter) return false;
         return true;
       });
-
-      filtered.forEach(s => {
-        container.appendChild(createRowElement(s, false));
-      });
+      filtered.forEach(s => container.appendChild(createRowElement(s, false)));
     }
 
     function addWhaleCard(swap) {
@@ -620,11 +834,9 @@
       const buyRatio = m.buy_ratio !== undefined ? m.buy_ratio : 50;
       document.getElementById('cvd-buy-bar').style.width = `${buyRatio}%`;
       document.getElementById('cvd-sell-bar').style.width = `${100 - buyRatio}%`;
-      document.getElementById('stat-buy-pct').textContent = `${buyRatio}% B`;
 
       const cv = m.chain_volumes || {};
       const total5m = m.total_volume_5m || 1;
-      
       updateChainBar('eth', cv['ethereum'] || 0, total5m);
       updateChainBar('base', cv['base'] || 0, total5m);
       updateChainBar('arb', cv['arbitrum'] || 0, total5m);
@@ -637,10 +849,10 @@
       document.getElementById(`chain-bar-${id}`).style.width = `${pct}%`;
     }
 
+    // Modal Inspector
     function openTxModal(swap) {
       const modal = document.getElementById('tx-modal');
       const sideBadge = document.getElementById('modal-side-badge');
-      
       const isBuy = swap.side === 'BUY';
       sideBadge.textContent = `${swap.side} (${swap.tier})`;
       sideBadge.className = isBuy 
@@ -669,26 +881,279 @@
       modal.classList.remove('flex');
     }
 
+    // Settings Modal
+    function openSettingsModal() {
+      const modal = document.getElementById('settings-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeSettingsModal(e) {
+      const modal = document.getElementById('settings-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    async function saveSettings() {
+      const th = parseFloat(document.getElementById('setting-whale-threshold').value);
+      try {
+        await fetch('/api/settings', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ whale_threshold_usd: th })
+        });
+        alert(`Đã lưu cấu hình! Ngưỡng cá voi mới: $${th.toLocaleString()}`);
+        closeSettingsModal();
+      } catch (e) {
+        alert('Lỗi lưu cài đặt: ' + e);
+      }
+    }
+
+    async function testWebhookAlert() {
+      const url = document.getElementById('setting-webhook-url').value;
+      if (!url) {
+        alert('Vui lòng nhập Webhook URL (Discord / Telegram) để test.');
+        return;
+      }
+      try {
+        const res = await fetch('/api/webhook/test', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ webhook_url: url })
+        });
+        const data = await res.json();
+        alert(data.message);
+      } catch (e) {
+        alert('Lỗi gửi test webhook: ' + e);
+      }
+    }
+
     async function triggerSimulatedWhale() {
       try {
         const res = await fetch('/api/simulate-whale', { method: 'POST' });
         const data = await res.json();
-        console.log('Simulated Whale triggered:', data);
       } catch (err) {
         console.error('Trigger error:', err);
       }
     }
 
+    // Export CSV Feature
+    function exportCSV() {
+      if (allSwaps.length === 0) {
+        alert('Chưa có dữ liệu giao dịch để xuất.');
+        return;
+      }
+      const headers = ['timestamp', 'chain', 'dex', 'pair', 'side', 'price_usd', 'volume_usd', 'tier', 'tx_hash', 'sender', 'explorer_url'];
+      const rows = allSwaps.map(s => [
+        s.created_at,
+        s.chain,
+        `"${s.dex_name}"`,
+        `"${s.pair_label}"`,
+        s.side,
+        s.price_usd,
+        s.volume_usd,
+        s.tier,
+        s.tx_hash,
+        s.sender,
+        s.explorer_url
+      ]);
+
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `dex_whale_sentinel_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Realtime CVD Chart (Canvas)
+    async function refreshChartData() {
+      try {
+        const res = await fetch('/api/chart/bars');
+        const bars = await res.json();
+        drawCVDChart(bars);
+      } catch (e) {
+        console.error('Chart fetch error:', e);
+      }
+    }
+
+    function drawCVDChart(bars) {
+      const canvas = document.getElementById('cvd-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      
+      const width = canvas.parentElement.clientWidth;
+      const height = canvas.parentElement.clientHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.scale(dpr, dpr);
+
+      ctx.clearRect(0, 0, width, height);
+
+      if (!bars || bars.length === 0) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '12px Geist Mono';
+        ctx.textAlign = 'center';
+        ctx.fillText('Đang tích lũy các cột dữ liệu theo phút (chờ ít phút)...', width / 2, height / 2);
+        return;
+      }
+
+      // Compute metrics
+      let totalBuy = 0;
+      let totalSell = 0;
+      let maxVol = 1000;
+      let maxCVD = -Infinity;
+      let minCVD = Infinity;
+
+      bars.forEach(b => {
+        totalBuy += b.buy_volume;
+        totalSell += b.sell_volume;
+        const net = Math.abs(b.net_cvd);
+        if (net > maxVol) maxVol = net;
+        if (b.cumulative_cvd > maxCVD) maxCVD = b.cumulative_cvd;
+        if (b.cumulative_cvd < minCVD) minCVD = b.cumulative_cvd;
+      });
+
+      const netDelta = totalBuy - totalSell;
+      const netEl = document.getElementById('chart-net-cvd');
+      if (netDelta >= 0) {
+        netEl.textContent = `+${formatUSD(netDelta)}`;
+        netEl.className = 'text-xl font-bold text-emerald-400 mt-1';
+      } else {
+        netEl.textContent = `-${formatUSD(Math.abs(netDelta))}`;
+        netEl.className = 'text-xl font-bold text-rose-400 mt-1';
+      }
+      document.getElementById('chart-total-buy').textContent = formatUSD(totalBuy);
+      document.getElementById('chart-total-sell').textContent = formatUSD(totalSell);
+
+      // Chart Drawing
+      const padding = { top: 20, right: 30, bottom: 30, left: 50 };
+      const plotW = width - padding.left - padding.right;
+      const plotH = height - padding.top - padding.bottom;
+      const midY = padding.top + (plotH / 2);
+
+      // Zero line
+      ctx.strokeStyle = '#222e44';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, midY);
+      ctx.lineTo(width - padding.right, midY);
+      ctx.stroke();
+
+      const n = bars.length;
+      const colW = Math.max(6, (plotW / n) * 0.7);
+      const step = plotW / n;
+
+      // Draw Bars
+      bars.forEach((b, i) => {
+        const x = padding.left + (i * step) + (step - colW) / 2;
+        const isNetBuy = b.net_cvd >= 0;
+        const barH = (Math.abs(b.net_cvd) / maxVol) * (plotH / 2);
+
+        ctx.fillStyle = isNetBuy ? '#10b981' : '#f43f5e';
+        if (isNetBuy) {
+          ctx.fillRect(x, midY - barH, colW, barH);
+        } else {
+          ctx.fillRect(x, midY, colW, barH);
+        }
+
+        // Time label
+        if (i % Math.max(1, Math.floor(n / 6)) === 0) {
+          ctx.fillStyle = '#64748b';
+          ctx.font = '10px Geist Mono';
+          ctx.textAlign = 'center';
+          ctx.fillText(b.time_label || '', x + colW / 2, height - 8);
+        }
+      });
+
+      // Draw Cumulative CVD Line
+      if (maxCVD === minCVD) maxCVD = minCVD + 1;
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      bars.forEach((b, i) => {
+        const x = padding.left + (i * step) + step / 2;
+        const norm = (b.cumulative_cvd - minCVD) / (maxCVD - minCVD);
+        const y = padding.top + plotH - (norm * plotH);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
+    // Pools Directory
+    function renderPoolsDirectory() {
+      const tbody = document.getElementById('pools-table-body');
+      tbody.innerHTML = '';
+      if (!monitoredPoolsData || monitoredPoolsData.length === 0) return;
+
+      monitoredPoolsData.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-[#151d2c] transition-colors';
+        tr.innerHTML = `
+          <td class="py-2 px-3">${getChainBadge(p.chain)}</td>
+          <td class="py-2 px-3 font-semibold text-slate-200">${p.dex_name}</td>
+          <td class="py-2 px-3 text-slate-100 font-bold">${p.pair_label}</td>
+          <td class="py-2 px-3 text-slate-400 truncate max-w-[200px]" title="${p.pool_id}">${p.pool_id}</td>
+          <td class="py-2 px-3 text-right">
+            <a href="${p.explorer_tx_base.replace('/tx/', '/address/')}${p.pool_id}" target="_blank" class="text-blue-400 hover:underline">
+              Explorer ↗
+            </a>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Whale Leaderboard
+    async function refreshLeaderboard() {
+      try {
+        const res = await fetch('/api/whales/leaderboard');
+        const wallets = await res.json();
+        const tbody = document.getElementById('whales-table-body');
+        tbody.innerHTML = '';
+
+        if (!wallets || wallets.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-slate-500">Chưa ghi nhận ví cá voi lớn trong phiên...</td></tr>';
+          return;
+        }
+
+        wallets.forEach((w, idx) => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-[#151d2c] transition-colors';
+          const shortAddr = `${w.address.slice(0, 8)}...${w.address.slice(-6)}`;
+          tr.innerHTML = `
+            <td class="py-2 px-3 text-center text-slate-400">${idx + 1}</td>
+            <td class="py-2 px-3 text-slate-200 font-semibold" title="${w.address}">${shortAddr}</td>
+            <td class="py-2 px-3">${getChainBadge(w.chain)}</td>
+            <td class="py-2 px-3 text-right font-bold text-amber-400">${formatUSD(w.total_volume_usd)}</td>
+            <td class="py-2 px-3 text-right text-emerald-400">${formatUSD(w.buy_volume_usd)}</td>
+            <td class="py-2 px-3 text-right text-rose-400">${formatUSD(w.sell_volume_usd)}</td>
+            <td class="py-2 px-3 text-center text-slate-300">${w.tx_count}</td>
+            <td class="py-2 px-3 text-right">
+              <a href="${w.explorer_url}" target="_blank" class="text-blue-400 hover:underline text-[11px]">
+                Xem Ví ↗
+              </a>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        console.error('Leaderboard error:', e);
+      }
+    }
+
+    // WebSocket Stream Connection
     function initWebSocket() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws/stream`;
-
       socket = new WebSocket(wsUrl);
 
       socket.onopen = () => {
-        document.getElementById('stat-engine-status').textContent = 'STREAMING DEXPAPRIKA';
-        document.getElementById('stat-engine-status').className = 'text-emerald-400 font-mono font-medium';
-        console.log('Connected to DEX Sentinel WebSocket Stream');
+        console.log('DEX Sentinel WebSocket Live');
       };
 
       socket.onmessage = (event) => {
@@ -699,6 +1164,7 @@
           } else if (msg.type === 'METRICS') {
             updateMetrics(msg.data);
           } else if (msg.type === 'SNAPSHOT') {
+            if (msg.pools) monitoredPoolsData = msg.pools;
             if (msg.metrics) updateMetrics(msg.metrics);
             if (msg.recent_swaps) {
               msg.recent_swaps.reverse().forEach(s => addSwapToStream(s));
@@ -708,19 +1174,12 @@
             }
           }
         } catch (e) {
-          console.error('WS Message parsing error:', e);
+          console.error('WS parse error:', e);
         }
       };
 
       socket.onclose = () => {
-        document.getElementById('stat-engine-status').textContent = 'RECONNECTING...';
-        document.getElementById('stat-engine-status').className = 'text-amber-400 font-mono font-medium';
         setTimeout(initWebSocket, 2500);
-      };
-
-      socket.onerror = (err) => {
-        console.warn('WS socket error:', err);
-        socket.close();
       };
     }
 
