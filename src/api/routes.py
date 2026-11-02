@@ -1,10 +1,11 @@
-﻿import random
+import random
 import time
 from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from src.config import settings
+from src.ingestion.poller import stream_poller
 from src.engine.window import stats_window
 from src.engine.detector import NormalizedSwap, classify_tier
 from src.api.websocket import ws_manager
@@ -22,7 +23,8 @@ class WebhookTestPayload(BaseModel):
 @router.get("/status")
 async def get_status():
     return {
-        "status": "ONLINE",
+        "status": stream_poller.health_snapshot()["status"],
+        "ingestion": stream_poller.health_snapshot(),
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "monitored_pools_count": len(settings.MONITORED_POOLS),
@@ -40,15 +42,15 @@ async def get_metrics():
     return stats_window.get_metrics()
 
 @router.get("/recent")
-async def get_recent_swaps(limit: int = 100):
+async def get_recent_swaps(limit: int = Query(100, ge=1, le=250)):
     return [s.model_dump() for s in stats_window.get_recent_swaps(limit=limit)]
 
 @router.get("/whales")
-async def get_recent_whales(limit: int = 50):
+async def get_recent_whales(limit: int = Query(50, ge=1, le=100)):
     return [s.model_dump() for s in stats_window.get_recent_whales(limit=limit)]
 
 @router.get("/whales/leaderboard")
-async def get_whale_leaderboard(limit: int = 25):
+async def get_whale_leaderboard(limit: int = Query(25, ge=1, le=100)):
     return stats_window.get_top_wallets(limit=limit)
 
 @router.get("/chart/bars")
@@ -71,8 +73,9 @@ async def update_settings(payload: SettingsUpdate):
 async def test_webhook(payload: WebhookTestPayload):
     # Simulated webhook notification dispatch
     return {
-        "status": "success",
-        "message": f"Whale alert test dispatched to {payload.channel_name}",
+        "status": "simulated",
+        "delivered": False,
+        "message": "Preview only; no webhook request was sent",
         "sample_alert": {
             "title": "WHALE ALERT DETECTED",
             "chain": "ethereum",

@@ -1,3 +1,4 @@
+import asyncio
 import httpx
 from typing import List, Dict, Any, Optional
 from src.config import settings
@@ -13,17 +14,22 @@ class DexClient:
             }
         )
 
-    async def fetch_pool_transactions(self, chain: str, pool_id: str, limit: int = 15) -> List[Dict[str, Any]]:
+    async def fetch_pool_transactions(self, chain: str, pool_id: str, limit: int = 15, page: int = 1):
         url = f"{self.base_url}/networks/{chain}/pools/{pool_id}/transactions"
-        params = {"limit": limit, "page": 1}
-        try:
-            resp = await self.client.get(url, params=params)
-            if resp.status_code == 200:
-                data = resp.json()
-                return data.get("transactions", [])
-            return []
-        except Exception:
-            return []
+        for attempt in range(3):
+            try:
+                response = await self.client.get(url, params={"limit": limit, "page": page})
+                response.raise_for_status()
+                transactions = response.json().get("transactions")
+                if not isinstance(transactions, list):
+                    raise ValueError("Upstream response is missing the transactions list")
+                return transactions
+            except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code != 429 and exc.response.status_code < 500:
+                    raise
+                if attempt == 2:
+                    raise
+                await asyncio.sleep(.5 * 2**attempt)
 
     async def fetch_networks(self) -> List[Dict[str, Any]]:
         url = f"{self.base_url}/networks"

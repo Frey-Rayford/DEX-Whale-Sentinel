@@ -267,7 +267,7 @@
       <!-- Bottom Status Bar -->
       <div class="px-3 py-1.5 bg-[#0b0f17] border-t border-[#1a2233] flex items-center justify-between text-[11px] text-slate-400 font-mono">
         <div>
-          <span>Ingested Total: </span>
+          <span id="source-health">Sources: checking…</span> · <span>Ingested Total: </span>
           <span id="stream-count-total" class="text-slate-200 font-semibold">0</span> swaps
           (<span id="stream-volume-total" class="text-slate-200 font-semibold">$0</span>)
         </div>
@@ -490,9 +490,9 @@
           <label class="block text-slate-400 font-semibold mb-1">Tích Hợp Webhook (Telegram / Discord):</label>
           <input id="setting-webhook-url" type="url" placeholder="https://discord.com/api/webhooks/... hoặc Telegram bot" class="w-full bg-[#151c2a] border border-[#222e44] rounded px-2.5 py-1.5 text-slate-100 font-mono text-[11px] outline-none focus:border-blue-500">
           <div class="flex justify-between items-center mt-1.5">
-            <span class="text-[10px] text-slate-500">Bắn thông báo tự động khi phát hiện cá voi.</span>
+            <span class="text-[10px] text-slate-500">Xem thử nội dung; chưa gửi webhook ra ngoài.</span>
             <button onclick="testWebhookAlert()" class="filter-btn text-[10px] py-1 px-2 text-blue-400 border-blue-900 bg-blue-950/40 hover:bg-blue-900/60">
-              Test Webhook
+              Preview alert
             </button>
           </div>
         </div>
@@ -1183,8 +1183,22 @@
       };
     }
 
+    async function refreshSourceHealth() {
+      const label = document.getElementById('source-health');
+      try {
+        const response = await fetch('/api/status');
+        if (!response.ok) throw new Error('Status unavailable');
+        const status = await response.json();
+        label.textContent = `Sources: ${status.status}`;
+        label.title = status.ingestion.pools.map(p => `${p.pool}: ${p.stale ? 'stale' : 'fresh'}${p.last_error ? ', ' + p.last_error : ''}`).join('\n');
+      } catch {
+        label.textContent = 'Sources: unavailable';
+      }
+    }
     window.addEventListener('DOMContentLoaded', () => {
       initWebSocket();
+      refreshSourceHealth();
+      setInterval(refreshSourceHealth, 10000);
     });
   </script>
 </body>
