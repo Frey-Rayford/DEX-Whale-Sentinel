@@ -1,8 +1,12 @@
 # DEX Whale Sentinel
 
+[Tiếng Việt](README.md) · [English](README.en.md)
+
 Theo dõi swap từ DexPaprika, phân loại giao dịch theo giá trị và tính CVD trong cửa sổ trượt. Backend dùng FastAPI; trình duyệt nhận cập nhật qua WebSocket.
 
-![Terminal](docs/terminal_preview.png)
+![Giao diện DEX Whale Sentinel đang chạy local](docs/dashboard-current.png)
+
+Ảnh chụp bản hiện tại. Lúc chụp, các request ra nguồn không kết nối được nên bảng trống và Sources hiển thị DEGRADED; đây không phải bằng chứng về số giao dịch hay tốc độ xử lý.
 
 ## Chạy
 
